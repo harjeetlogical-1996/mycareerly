@@ -1,0 +1,239 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Article {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  title           String
+  excerpt         String   @default("")
+  content         String
+  coverImage      String   @default("")
+  category        String
+  tags            String   @default("[]")
+  authorName      String
+  authorBio       String   @default("")
+  authorEmail     String   @default("")
+  status          String   @default("pending")
+  featured        Boolean  @default(false)
+  readTime        String   @default("5 min read")
+  publishedAt     String   @default("")
+  metaTitle       String   @default("")
+  metaDescription String   @default("")
+  keywords        String   @default("")
+  faqs            String   @default("[]")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Author {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  bio       String   @default("")
+  avatar    String   @default("")
+  email     String   @default("")
+  specialty String   @default("")
+  twitter   String   @default("")
+  instagram String   @default("")
+  website   String   @default("")
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String   @default("")
+  color       String   @default("#E8705A")
+  order       Int      @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model City {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  name            String
+  state           String
+  stateFull       String   @default("")
+  coverImage      String   @default("")
+  heroImage       String   @default("")
+  description     String   @default("")
+  shortDesc       String   @default("")
+  metaTitle       String   @default("")
+  metaDescription String   @default("")
+  keywords        String   @default("")
+  featured        Boolean  @default(false)
+  active          Boolean  @default(true)
+  order           Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ScheduledArticle {
+  id                 String   @id @default(cuid())
+  title              String
+  reference          String   @default("")
+  category           String   @default("Care Guide")
+  authorName         String   @default("MyCareerly Editorial")
+  scheduledFor       DateTime
+  status             String   @default("pending")
+  generatedArticleId String?
+  errorMessage       String   @default("")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model Setting {
+  key       String   @id
+  value     String   @default("")
+  updatedAt DateTime @updatedAt
+}
+
+model Subscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String   @default("")
+  source    String   @default("newsletter")
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  subject   String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Review {
+  id          String   @id @default(cuid())
+  listingId   String
+  authorName  String
+  authorEmail String
+  rating      Int      // 1-5
+  title       String   @default("")
+  body        String
+  helpful     Int      @default(0)
+  status      String   @default("pending")  // pending | approved | rejected
+  ipHash      String   @default("")          // optional spam protection
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([listingId, status])
+  @@index([status, createdAt])
+}
+
+model PinterestAccount {
+  id               String   @id @default(cuid())
+  username         String   @unique
+  label            String   @default("")
+  accessToken      String
+  refreshToken     String
+  tokenExpiresAt   DateTime
+  defaultBoardId   String   @default("")
+  autoPostEnabled  Boolean  @default(false)
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  pins             PinterestPin[]
+  boardMaps        PinterestBoardMap[]
+}
+
+model PinterestPin {
+  id           String   @id @default(cuid())
+  accountId    String
+  account      PinterestAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  articleId    String
+  imageId      String?
+  image        PinterestImage? @relation(fields: [imageId], references: [id])
+  title        String
+  description  String   @default("")
+  hashtags     String   @default("")
+  boardId      String
+  pinId        String?
+  status       String   @default("draft")
+  scheduledFor DateTime?
+  postedAt     DateTime?
+  attempts     Int      @default(0)
+  lastError    String   @default("")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([status, scheduledFor])
+  @@index([articleId])
+  @@index([accountId, status])
+}
+
+model PinterestImage {
+  id         String   @id @default(cuid())
+  articleId  String
+  url        String
+  source     String   @default("upload")
+  prompt     String   @default("")
+  width      Int      @default(0)
+  height     Int      @default(0)
+  createdAt  DateTime @default(now())
+  pins       PinterestPin[]
+
+  @@index([articleId])
+}
+
+model PinterestBoardMap {
+  id        String @id @default(cuid())
+  accountId String
+  account   PinterestAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  category  String
+  boardId   String
+  boardName String @default("")
+
+  @@unique([accountId, category])
+}
+
+model Listing {
+  id                String   @id @default(cuid())
+  slug              String   @unique
+  name              String
+  tagline           String   @default("")
+  description       String
+  address           String
+  city              String
+  pincode           String
+  phone             String
+  email             String
+  website           String   @default("")
+  rating            Float    @default(0)
+  reviewCount       Int      @default(0)
+  images            String   @default("[]")
+  categories        String   @default("[]")
+  tags              String   @default("[]")
+  hours             String   @default("[]")
+  open              Boolean  @default(true)
+  verified          Boolean  @default(false)
+  featured          Boolean  @default(false)
+  established       String   @default("")
+  priceRange        String   @default("mid")
+  deliveryAvailable Boolean  @default(false)
+  status            String   @default("pending")
+  state             String   @default("")
+  citySlug          String   @default("")
+  sponsored         Boolean  @default(false)
+  sortOrder         Int      @default(0)
+  submittedBy       String   @default("admin")
+  showEmail         Boolean  @default(false)
+  googlePlaceId     String   @default("")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}

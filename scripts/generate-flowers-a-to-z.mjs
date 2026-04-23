@@ -1,0 +1,155 @@
+import https from "https";
+import fs from "fs";
+import path from "path";
+
+const GEMINI_KEY = "AIzaSyB5jteecTdcJuiWOXlj3uIm4wDHS6i6gEo";
+const MODELS = [
+  "gemini-3.1-flash-lite-preview",
+  "gemini-2.5-flash-lite",
+  "gemini-2.5-flash",
+  "gemini-flash-latest",
+];
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const isTransient = (m) => /high demand|overloaded|rate limit|quota|unavailable|resource_exhausted|429|500|503/i.test(m);
+
+async function callModel(model, prompt) {
+  return new Promise((resolve, reject) => {
+    const body = JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.3, maxOutputTokens: 16384 },
+    });
+    const req = https.request(
+      {
+        hostname: "generativelanguage.googleapis.com",
+        path: `/v1beta/models/${model}:generateContent?key=${GEMINI_KEY}`,
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) },
+      },
+      (res) => {
+        let data = "";
+        res.on("data", (c) => (data += c));
+        res.on("end", () => {
+          try {
+            const json = JSON.parse(data);
+            const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (text) return resolve(text);
+            reject(new Error(json.error?.message || `HTTP ${res.statusCode}`));
+          } catch (e) { reject(e); }
+        });
+      }
+    );
+    req.on("error", reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+async function callGemini(prompt) {
+  let lastErr = null;
+  for (const model of MODELS) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        return await callModel(model, prompt);
+      } catch (e) {
+        lastErr = e;
+        if (!isTransient(e.message ?? "")) throw e;
+        if (attempt < 2) await sleep(1000 * Math.pow(2, attempt));
+      }
+    }
+  }
+  throw lastErr ?? new Error("All models exhausted");
+}
+
+function parseJson(raw) {
+  const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    const match = cleaned.match(/\[[\s\S]*\]|\{[\s\S]*\}/);
+    if (!match) throw new Error("Invalid JSON");
+    return JSON.parse(match[0]);
+  }
+}
+
+const PROMPT = (letter) => `You are a botanical expert. List every real flower name (botanical and common names, cultivars, hybrids, and varieties) that starts with the letter "${letter.toUpperCase()}".
+
+## Rules
+- Include as MANY real flower names as you know — aim for 80-150+ per letter (common letters like A/C/D/H/P/R/S may have 150-250+; rare letters like Q/X/Y/Z may have 20-50).
+- Include: scientific names, common garden flowers, wildflowers, tropical flowers, orchids, roses, cultivars, and well-known hybrids.
+- Each flower: give a name + 1 short sentence description (20-40 words) mentioning color, origin/region, meaning, or key feature.
+- Use real flower names only. Do NOT make up names.
+- Order alphabetically.
+
+## Output format
+Return ONLY a JSON array. No code fences. No commentary. Start with [ and end with ].
+
+[
+  {"name": "Acacia", "desc": "Yellow pom-pom-like flowers native to Australia, symbolizing friendship and secret love."},
+  {"name": "Aconite", "desc": "Purple-blue hooded flowers, also called Monkshood, known for toxicity and alpine native heritage."},
+  ...
+]`;
+
+const outputPath = path.join(process.cwd(), "app", "data", "flowers-by-letter.ts");
+const letters = "abcdefghijklmnopqrstuvwxyz".split("");
+
+const existing = {};
+if (fs.existsSync(outputPath)) {
+  try {
+    // Try to preserve any existing data
+    const content = fs.readFileSync(outputPath, "utf8");
+    const match = content.match(/export const FLOWERS_BY_LETTER[^=]*=\s*(\{[\s\S]*?\});/);
+    if (match) {
+      const parsed = eval("(" + match[1] + ")");
+      Object.assign(existing, parsed);
+    }
+  } catch {}
+}
+
+const results = { ...existing };
+
+for (const letter of letters) {
+  if (results[letter] && results[letter].length > 10) {
+    console.log(`✓ ${letter.toUpperCase()} already has ${results[letter].length} flowers — skipping`);
+    continue;
+  }
+  console.log(`\n🌸 Generating flowers for letter ${letter.toUpperCase()}...`);
+  try {
+    const raw = await callGemini(PROMPT(letter));
+    const flowers = parseJson(raw);
+    if (Array.isArray(flowers)) {
+      results[letter] = flowers.filter((f) => f && f.name && f.name.trim().toLowerCase().startsWith(letter));
+      console.log(`   ✓ ${results[letter].length} flowers`);
+    } else {
+      console.log(`   ✗ Invalid response`);
+      results[letter] = [];
+    }
+  } catch (e) {
+    console.log(`   ✗ ${e.message}`);
+    results[letter] = [];
+  }
+  // Save after each letter so partial progress is preserved
+  writeOutput(results);
+  await new Promise((r) => setTimeout(r, 500));
+}
+
+function writeOutput(data) {
+  const body = `// Auto-generated by scripts/generate-flowers-a-to-z.mjs
+// Do not edit manually — regenerate via the script
+
+export type FlowerEntry = { name: string; desc: string };
+
+export const FLOWERS_BY_LETTER: Record<string, FlowerEntry[]> = ${JSON.stringify(data, null, 2)};
+
+export const LETTERS = "abcdefghijklmnopqrstuvwxyz".split("");
+
+export function totalFlowerCount(): number {
+  return Object.values(FLOWERS_BY_LETTER).reduce((sum, arr) => sum + arr.length, 0);
+}
+`;
+  fs.writeFileSync(outputPath, body);
+}
+
+writeOutput(results);
+const total = Object.values(results).reduce((s, a) => s + a.length, 0);
+console.log(`\n✅ Saved ${total} flowers across ${letters.length} letters to app/data/flowers-by-letter.ts`);

@@ -1,0 +1,104 @@
+import "dotenv/config";
+import { PrismaClient } from "../app/generated/prisma/client";
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+
+const dbUrl = process.env.DATABASE_URL ?? "file:./dev.db";
+const adapter = new PrismaBetterSqlite3({ url: dbUrl });
+const prisma = new PrismaClient({ adapter } as any);
+
+const u = (id: string, w = 1400) => `https://images.unsplash.com/photo-${id}?w=${w}&q=80&auto=format&fit=crop`;
+
+// Each city: [slug, name, state, stateFull, photoId, shortDesc, fullDesc]
+const CITIES: [string, string, string, string, string, string, string][] = [
+  ["new-york","New York","NY","New York","1496442226666-8d4d0e62e6e9","From SoHo studios to UWS neighborhood gems — NYC's best florists","New York City is home to hundreds of exceptional flower shops, from iconic Upper West Side institutions to cutting-edge SoHo floral studios. Whether you need same-day delivery in Manhattan, a stunning wedding arrangement in Brooklyn, or a custom corporate gift in Midtown, NYC's florists deliver unmatched artistry and service."],
+  ["los-angeles","Los Angeles","CA","California","1534430480872-3498386e7856","Sun-drenched arrangements and California wildflower specialists","Los Angeles florists bring Southern California sunshine into every arrangement. From Beverly Hills luxury studios to Echo Park's bohemian flower artists, LA's 10+ verified florists specialize in tropical blooms, desert natives, and Hollywood-worthy event design."],
+  ["chicago","Chicago","IL","Illinois","1477959858617-67f85cf4f1df","Windy City florists blending elegance with Midwestern warmth","Chicago's flower scene mirrors the city itself — bold, sophisticated, and deeply rooted in community. From the Gold Coast's luxury boutiques to Wicker Park's indie studios, Chicago florists excel at everything from Michigan Avenue weddings to Lake Shore Drive corporate events."],
+  ["houston","Houston","TX","Texas","1545194445-dddb8f4487c6","Diverse, vibrant florals reflecting Houston's multicultural spirit","Houston is the Fourth Coast's flower capital, with studios ranging from River Oaks luxury to Montrose's creative scene. Houston florists are known for spectacular Texas-sized arrangements, tropical blooms imported from the Gulf, and world-class wedding design."],
+  ["phoenix","Phoenix","AZ","Arizona","1558618047-3c1b48e7e6e0","Desert-native florals and Sonoran-inspired arrangements","Phoenix florists celebrate the Sonoran Desert's unique beauty, pairing cactus blooms and native wildflowers with classic roses and peonies. From Scottsdale luxury to Tempe's university scene, the Valley offers florists for every occasion and budget."],
+  ["philadelphia","Philadelphia","PA","Pennsylvania","1569979622394-dd88e94d3c9e","Historic charm meets contemporary floral artistry","From Rittenhouse Square elegance to Fishtown's creative boom, Philadelphia florists blend colonial heritage with modern design. Pennsylvania's oldest florists have been decorating Main Line mansions and South Philly row homes for generations."],
+  ["san-antonio","San Antonio","TX","Texas","1571211265665-af39fa86b4f5","Texas charm with River Walk elegance","San Antonio florists bring Texas warmth to every arrangement, serving everything from Alamo Plaza events to River Walk weddings. Alamo Heights luxury studios and Pearl District artisan florists offer unmatched South Texas hospitality."],
+  ["san-diego","San Diego","CA","California","1617611647086-4c31e4ee4a4e","Coastal blooms and La Jolla luxury florals","San Diego's flower scene stretches from La Jolla Cove's luxury studios to Ocean Beach's bohemian florists. Expect stunning tropical arrangements, beach wedding specialists, and coastal-inspired bouquets across America's Finest City."],
+  ["dallas","Dallas","TX","Texas","1612638015253-70a7bd02745b","Highland Park luxury and Deep Ellum creativity","Dallas florists define Texas sophistication, from Highland Park's five-generation mansion florists to Deep Ellum's artistic studios. Big-D's flower shops excel at everything from Neiman Marcus-caliber luxury to Bishop Arts indie designs."],
+  ["san-jose","San Jose","CA","California","1591608506892-49d9b8d55c7a","Silicon Valley's thoughtful floral artistry","San Jose florists serve the tech capital of the world with modern, design-forward arrangements. From Willow Glen's village charm to Santana Row's European elegance, Bay Area South's flower scene punches above its weight."],
+  ["austin","Austin","TX","Texas","1573804632538-f0e2cd4f32a3","Keep Austin weird, keep Austin blooming","Austin's flower shops capture the city's quirky, creative spirit — from SoCo's Instagrammable boutiques to East Austin's bold indie studios. Expect wildflower-forward designs, SXSW event specialists, and ACL festival-favorite florists."],
+  ["jacksonville","Jacksonville","FL","Florida","1566408669374-5a6d5dca1cef","River-city blooms from Riverside to the beaches","Jacksonville florists serve Florida's largest city from historic Riverside-Avondale to the Atlantic beaches. Expect tropical Florida blooms, St Johns River waterfront wedding specialists, and Ponte Vedra luxury resort florists."],
+  ["fort-worth","Fort Worth","TX","Texas","1612738540571-b6dc3bcb0b60","Where cowtown heritage meets modern floristry","Fort Worth blends its stockyard heritage with contemporary floral artistry. From Sundance Square downtown to TCU neighborhood studios, Cowtown florists excel at rustic-chic weddings, ranch events, and classic Texas elegance."],
+  ["columbus","Columbus","OH","Ohio","1517732306149-e8f829eb588a","Buckeye State florals with Short North flair","Columbus florists reflect Ohio's capital city diversity — from Short North's artistic scene to German Village's old-world charm. Buckeye State blooms include OSU game-day arrangements, Bexley mansion florals, and Clintonville eco-florists."],
+  ["charlotte","Charlotte","NC","North Carolina","1571005434519-d3e76f6f3875","Queen City florals from Myers Park to NoDa","Charlotte florists serve North Carolina's largest metro with Southern elegance and urban creativity. Myers Park mansions, Dilworth craftsman homes, and NoDa arts-district lofts all get their flowers from Charlotte's 10+ exceptional shops."],
+  ["indianapolis","Indianapolis","IN","Indiana","1611139893062-d22cba8bad0b","Crossroads of America flower artistry","Indianapolis florists anchor the Crossroads of America with warm Midwestern service. From Broad Ripple's eclectic studios to Mass Ave's creative scene, Indy offers florists for the 500, weddings, and everyday celebrations."],
+  ["san-francisco","San Francisco","CA","California","1501594907352-04cda38ebc29","Pacific Heights luxury and Mission creativity","San Francisco florists are among America's most creative, from Pacific Heights' luxury mansions to the Castro's colorful community. Expect Victorian garden-style arrangements, Mission-district bold designs, and North Beach's Italian heritage florists."],
+  ["seattle","Seattle","WA","Washington","1502175353174-a7a70e73b362","Pacific Northwest foraged beauty","Seattle florists embrace the Pacific Northwest's lush abundance — foraged greens, moody seasonals, and Scandinavian minimalism. From Capitol Hill's indie creativity to Ballard's Nordic-inspired boutiques, Emerald City blooms are world-class."],
+  ["denver","Denver","CO","Colorado","1546156929-a4c0ac411f47","Mile-High florals with Rocky Mountain spirit","Denver florists fuse urban sophistication with Rocky Mountain natural beauty. Cherry Creek luxury, LoDo industrial-chic, and Wash Park garden-style — Mile-High City flowers are as vibrant and varied as Colorado itself."],
+  ["nashville","Nashville","TN","Tennessee","1555109307-f7d9da25c244","Music City blooms with Southern charm","Nashville florists capture Music City's creative soul — from East Nashville's indie studios to 12 South's Instagrammable boutiques. Honky-tonk to Belle Meade mansion, Nashville blooms for every Tennessee tradition."],
+  ["oklahoma-city","Oklahoma City","OK","Oklahoma","1587552055013-b8fe589c9332","OKC flair from Paseo Arts to Nichols Hills","Oklahoma City florists serve the Heartland with Boomer-Sooner spirit and Paseo Arts creativity. Expect Western-inspired arrangements, Nichols Hills luxury florals, and Route 66 heritage blooms."],
+  ["el-paso","El Paso","TX","Texas","1568192254862-3b40b1e73a1f","Borderland blooms celebrating binational culture","El Paso florists blend Texas and Mexican floral traditions into something uniquely border-town beautiful. Sun City florists specialize in Chihuahuan Desert natives, quinceañera florals, and Franklin Mountain estate weddings."],
+  ["washington-dc","Washington DC","DC","District of Columbia","1501466044931-62695c67bea4","Diplomatic elegance and Georgetown sophistication","Washington DC florists serve the nation's capital with diplomatic-grade elegance. Georgetown's historic shops design for embassies and Cabinet members, while Dupont Circle and Capitol Hill studios craft everyday beauty for the city's thinkers and doers."],
+  ["las-vegas","Las Vegas","NV","Nevada","1506814132000-3d84a4395302","Strip-worthy glamour and Summerlin luxury","Las Vegas florists deliver Strip-caliber drama — from Bellagio-worthy arrangements to Summerlin luxury florals. Whether it's a Vegas wedding chapel, casino VIP event, or Henderson family celebration, Sin City florists go bold."],
+  ["louisville","Louisville","KY","Kentucky","1572125195-3f3be8b33b23","Bourbon country elegance and Derby-day glamour","Louisville florists bring Kentucky Derby-caliber glamour to every arrangement. From NuLu's trendy studios to Highlands' bohemian shops, Derby City specializes in bourbon-barrel arrangements, Derby hat florals, and equestrian event blooms."],
+  ["memphis","Memphis","TN","Tennessee","1562019268-3f78e18ce36b","Blues-city blooms with soul and style","Memphis florists channel the city's musical heritage — from Cooper-Young's bohemian studios to East Memphis' country club elegance. Bluff City blooms include Graceland-inspired arrangements, BBQ festival florals, and Beale Street party decor."],
+  ["portland","Portland","OR","Oregon","1533900298318-6b8da08a523e","Keep Portland weird and beautifully blooming","Portland florists embody the city's creative, eco-conscious spirit. Pearl District luxury, Alberta Arts creativity, and Hawthorne Boulevard bohemia — PDX blooms embrace foraged greens, seasonal natives, and sustainable floral design."],
+  ["baltimore","Baltimore","MD","Maryland","1581822022041-9e03b39cda5c","Charm City florals from Fells Point to Federal Hill","Baltimore florists have been decorating the city's historic row houses and harbor events for decades. From Fells Point's cobblestone studios to Roland Park's mansion florists, Charm City blooms capture Maryland's diverse floral traditions."],
+  ["milwaukee","Milwaukee","WI","Wisconsin","1548345886-98d066eb8389","Cream-city florals from Third Ward to the lakeshore","Milwaukee florists bring Wisconsin warmth to every arrangement. Third Ward's arts-district studios, Bay View's indie florists, and Shorewood's lakeside shops all reflect Cream City's manufacturing heritage turned creative renaissance."],
+  ["albuquerque","Albuquerque","NM","New Mexico","1588666309990-d41f95d73976","Southwestern style with Sandia Mountain beauty","Albuquerque florists celebrate New Mexico's Sonoran-Pueblo floral heritage. Old Town adobe florists, Nob Hill Route 66 studios, and Sandia Foothills luxury shops craft arrangements featuring native desert plants and cultural Southwest elements."],
+  ["tucson","Tucson","AZ","Arizona","1523294086881-bdd4a4f6c468","Desert blooms from the Old Pueblo","Tucson florists embrace the Sonoran Desert's unique beauty, specializing in native wildflowers, saguaro-inspired arrangements, and Catalina Foothills luxury florals. From Barrio Viejo's adobe studios to Oro Valley's suburban shops, Old Pueblo blooms stand apart."],
+  ["fresno","Fresno","CA","California","1569163139394-de4798d9c2c3","Central Valley freshness meets Fig Garden elegance","Fresno florists anchor California's agricultural heartland, sourcing directly from San Joaquin Valley growers. Tower District creativity, Fig Garden Village upscale, and Woodward Park family shops — Fresno blooms are farm-fresh and California-beautiful."],
+  ["sacramento","Sacramento","CA","California","1572226970057-89f2af6d5a59","Capitol-city blooms with Fabulous Forties elegance","Sacramento florists serve California's capital with garden-grown freshness. Midtown creativity, East Sacramento's historic Fabulous Forties, and Curtis Park craftsman-era charm — Sac's 10+ florists reflect the state capital's layered beauty."],
+  ["mesa","Mesa","AZ","Arizona","1599305090598-b8b5b2da3ddd","East Valley blooms from Red Mountain to Gilbert","Mesa florists serve Arizona's East Valley with desert-adapted arrangements and suburban community service. From Red Mountain views to Gilbert's Heritage District, Mesa blooms span desert natives to classic wedding flowers."],
+  ["kansas-city","Kansas City","MO","Missouri","1566501033905-5b2ccc5f12c8","Country Club Plaza elegance and Crossroads creativity","Kansas City florists serve the heart of America with Plaza-caliber luxury and Crossroads arts-district creativity. Brookside village charm, Westport entertainment, and Overland Park suburban elegance — KC blooms capture Midwestern heart and sophistication."],
+  ["atlanta","Atlanta","GA","Georgia","1575917649705-5b59aaa2d6cf","Buckhead magnolia and East Atlanta eclecticism","Atlanta florists channel the South's soul, from Buckhead's magnolia-draped luxury to Little Five Points' punk-rock creativity. Expect Southern classics — magnolias, peonies, gardenias — alongside Inman Park Victorian festivals and Midtown Piedmont Park events."],
+  ["omaha","Omaha","NE","Nebraska","1596554030635-07e2f8d66b71","Old Market cobblestones and Dundee charm","Omaha florists ground the Great Plains in Warren Buffett-era warmth. Old Market's historic cobblestone district, Dundee's craftsman neighborhoods, and Benson's creative comeback — Omaha blooms capture Nebraska's quiet, steady beauty."],
+  ["colorado-springs","Colorado Springs","CO","Colorado","1617444291648-7aaf3a1e2e78","Pikes Peak views and Broadmoor elegance","Colorado Springs florists design with Pikes Peak as their backdrop. From Old Colorado City Victorian charm to The Broadmoor resort luxury and Manitou Springs arts-town creativity, CO Springs blooms capture Rocky Mountain magic."],
+  ["raleigh","Raleigh","NC","North Carolina","1610146577000-48e23e0a2f05","Research Triangle blooms with Five Points charm","Raleigh florists blend Southern tradition with Research Triangle innovation. Five Points village elegance, Glenwood South nightlife, and North Hills upscale shopping — Oak City florists serve everything from NC State graduations to Cary tech events."],
+  ["long-beach","Long Beach","CA","California","1555679486-e341a3e7b6de","Beach-city blooms from Belmont Shore to Naples","Long Beach florists capture SoCal beach-town charm — Belmont Shore's 2nd Street boutiques, Naples Island's Italian-inspired studios, and Downtown's Pike Outlets modern shops. LBC blooms reflect the city's laid-back coastal elegance."],
+  ["virginia-beach","Virginia Beach","VA","Virginia","1507032723767-04ba2e6d4e68","Oceanfront blooms and Hilltop elegance","Virginia Beach florists serve Hampton Roads' coastal community with resort-quality arrangements. From Oceanfront boardwalk to Hilltop shopping district and Great Neck luxury, VB blooms span beach weddings to Chesapeake Bay waterfront estates."],
+  ["miami","Miami","FL","Florida","1535498730771-e735b998cd64","Tropical glamour from Brickell to Coconut Grove","Miami florists deliver South Beach-caliber tropical glamour. Brickell's high-rise luxury, Wynwood's street-art creativity, Coral Gables' Mediterranean charm, and Little Havana's Cuban heritage — Miami blooms are as diverse as Magic City itself."],
+  ["minneapolis","Minneapolis","MN","Minnesota","1573625443169-4cb07c56d14f","Twin Cities florals with North-Shore style","Minneapolis florists capture the Twin Cities' indie-creative spirit. Uptown's theater scene, Northeast's arts district, and Linden Hills village charm — Mill City blooms reflect Minnesota's lakeside heritage and Nordic design sensibilities."],
+  ["tampa","Tampa","FL","Florida","1588416936553-17aaa5b0d3a4","Gulf Coast blooms from Ybor to Hyde Park","Tampa florists reflect Florida's Gulf Coast sophistication. Ybor City's Cuban heritage, Hyde Park Village's upscale charm, and South Tampa's Bayshore elegance — Tampa blooms capture the Gulf's tropical warmth and cultural depth."],
+  ["new-orleans","New Orleans","LA","Louisiana","1571001253888-a7b64e0a4e5a","Crescent City magic from Garden District to Frenchmen","New Orleans florists are the South's most magical, blending Creole heritage with jazz-age creativity. Garden District antebellum luxury, Marigny's Frenchmen Street creativity, French Quarter historic charm, and Uptown's oak-lined elegance — NOLA blooms are spellbinding."],
+  ["cleveland","Cleveland","OH","Ohio","1562619371-b67725b6fde2","Rock & Roll Capital blooms with Shaker Heights elegance","Cleveland florists bring rust-belt resilience to Midwest floristry. Ohio City's West Side Market district, Tremont's ArtWalk galleries, Little Italy's Murray Hill heritage, and Shaker Heights' garden-city mansions all get their flowers from CLE's 10+ shops."],
+  ["honolulu","Honolulu","HI","Hawaii","1542259009477-d625272157b7","Tropical paradise blooms from Waikiki to Kailua","Honolulu florists work with the world's most beautiful flowers — native Hawaiian plumeria, orchids, ti leaves, and heliconias. From Waikiki resort luxury to Kailua beach-town charm and Manoa Valley's rainbow-blessed shops, Oahu blooms are paradise itself."],
+  ["boston","Boston","MA","Massachusetts","1501979376754-b91f0ecdac54","Historic Boston blooms from Beacon Hill to Back Bay","Boston florists serve Beantown's layered heritage — Beacon Hill's gas-lit brownstones, Back Bay's Newbury Street luxury, South End's Victorian brick-lined streets, and Cambridge's Harvard Square academia. Boston blooms capture America's revolutionary city."],
+  ["detroit","Detroit","MI","Michigan","1597431395859-e4e63b00a1c5","Motor City florals from Midtown to Corktown","Detroit florists embody Motor City's resurgence. Midtown's cultural corridor, Corktown's oldest neighborhood revival, Ferndale's Woodward Avenue creativity, and Birmingham's Maple Road luxury — Detroit blooms grow from strength and community."],
+  ["pittsburgh","Pittsburgh","PA","Pennsylvania","1550236520-7050f3582da0","Steel City florals from Lawrenceville to Shadyside","Pittsburgh florists reflect the Steel City's creative rebirth. Lawrenceville's Butler Street renaissance, Strip District's historic markets, Shadyside's Walnut Street elegance, and Squirrel Hill's CMU/Jewish community — Pittsburgh blooms span three rivers and countless neighborhoods."],
+  ["salt-lake-city","Salt Lake City","UT","Utah","1553884501-7ea11f3e9b71","Wasatch Front blooms with Sugar House creativity","Salt Lake City florists serve the Wasatch Front with alpine-fresh arrangements. Liberty Park's craftsman bungalows, Sugar House's indie boutiques, The Avenues' Victorian heritage, and Cottonwood's ski-country charm — SLC blooms capture Utah's mountain-city magic."],
+];
+
+async function main() {
+  console.log("🌸 Seeding 51 cities with SEO metadata and images...");
+
+  for (let i = 0; i < CITIES.length; i++) {
+    const [slug, name, state, stateFull, photoId, shortDesc, description] = CITIES[i];
+
+    const coverImage = u(photoId, 800);
+    const heroImage = u(photoId, 1600);
+    const metaTitle = `Best Flower Shops in ${name}, ${stateFull} — Top Local Florists`;
+    const metaDescription = `Find ${name}'s best local flower shops. Browse 10+ verified florists with reviews, same-day delivery, custom arrangements, and wedding specialists in ${name}, ${stateFull}.`;
+    const keywords = `flower shops ${name}, florists ${name}, flower delivery ${name}, ${name} ${stateFull} florists, best florist ${name}, same-day flowers ${name}, wedding flowers ${name}`;
+
+    await prisma.city.upsert({
+      where: { slug },
+      create: {
+        slug, name, state, stateFull,
+        coverImage, heroImage,
+        shortDesc, description,
+        metaTitle, metaDescription, keywords,
+        featured: i < 6,
+        active: true,
+        order: i,
+      },
+      update: {
+        name, state, stateFull,
+        coverImage, heroImage,
+        shortDesc, description,
+        metaTitle, metaDescription, keywords,
+        featured: i < 6,
+        active: true,
+        order: i,
+      },
+    });
+  }
+
+  console.log(`✅ Seeded ${CITIES.length} cities`);
+}
+
+main().catch(console.error).finally(() => prisma.$disconnect());

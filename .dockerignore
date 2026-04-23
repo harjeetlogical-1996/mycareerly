@@ -1,0 +1,42 @@
+node_modules
+.next
+.git
+.gitignore
+Dockerfile
+.dockerignore
+README.md
+DEPLOYMENT.md
+.env*
+!.env.example
+
+# local dev data
+dev.db
+dev.db.backup
+*.db
+*.db-journal
+prisma/dev.db
+prisma/*.db*
+
+# user-uploaded local files (served from GCS in prod)
+public/uploads
+public/pinterest
+
+# GCP keys (never bake into image)
+gcp-key.json
+*-service-account.json
+
+# test / debug
+coverage
+.vscode
+.idea
+*.log
+npm-debug.log*
+yarn-debug.log*
+.pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# generated (rebuilt inside image)
+app/generated
