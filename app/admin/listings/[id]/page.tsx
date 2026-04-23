@@ -5,6 +5,8 @@ import { updateListing } from "../../../actions/listings";
 import { ArrowLeft, Save } from "lucide-react";
 import { CITIES } from "../../../data/listings";
 
+export const dynamic = "force-dynamic";
+
 const inputCls = "w-full bg-[#FAFAF8] border border-[#E8E4DF] rounded-xl px-4 py-3 text-sm text-[#1A1A1A] outline-none focus:border-[#E8705A] focus:ring-2 focus:ring-[#E8705A]/10 transition-all placeholder-[#B0A9A4]";
 
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {

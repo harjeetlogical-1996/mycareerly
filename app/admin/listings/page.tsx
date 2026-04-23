@@ -4,6 +4,8 @@ import { deleteListing, setListingStatus, toggleListingFeatured, toggleListingSp
 import { Pencil, CheckCircle2, XCircle, Clock, Star, Store, ExternalLink, Plus, Zap, ShieldCheck } from "lucide-react";
 import DeleteButton from "../components/DeleteButton";
 
+export const dynamic = "force-dynamic";
+
 const STATUS_TABS = ["all", "pending", "approved", "rejected"];
 
 function StatusBadge({ status }: { status: string }) {

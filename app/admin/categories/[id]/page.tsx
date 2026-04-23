@@ -4,6 +4,8 @@ import { ArrowLeft } from "lucide-react";
 import { prisma } from "../../../lib/prisma";
 import { updateCategory } from "../../../actions/categories";
 
+export const dynamic = "force-dynamic";
+
 const inputCls = "w-full bg-[#FAFAF8] border border-[#E8E4DF] rounded-xl px-4 py-3 text-sm text-[#1A1A1A] outline-none focus:border-[#E8705A] focus:ring-2 focus:ring-[#E8705A]/10 transition-all placeholder-[#B0A9A4]";
 
 const COLORS = ["#E8705A", "#C95540", "#7A9E7E", "#B8D4BB", "#1A1A1A", "#6B6B6B", "#4A90D9", "#9B59B6"];

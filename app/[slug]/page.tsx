@@ -10,6 +10,8 @@ import ShareButton from "./ShareButton";
 import PinItButton from "../components/PinItButton";
 import { SITE_URL, absoluteUrl } from "../lib/site";
 
+export const dynamic = "force-dynamic";
+
 const CAT_COLOR: Record<string, { text: string; bg: string }> = {
   "Care Guide":  { text: "#7A9E7E", bg: "#EDF5EE" },
   "Seasonal":    { text: "#E8705A", bg: "#FEF0ED" },

@@ -5,6 +5,8 @@ import Footer from "../../components/Footer";
 import { prisma } from "../../lib/prisma";
 import GiftFinderClient from "./GiftFinderClient";
 
+export const dynamic = "force-dynamic";
+
 const SITE_URL = "https://mycareerly.com";
 
 export const metadata: Metadata = {

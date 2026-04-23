@@ -12,6 +12,8 @@ import {
   ArrowLeft, Truck, Leaf, Share2, Heart, ChevronRight,
 } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 const SITE_URL = "https://mycareerly.com";
 const PRICE_LABELS: Record<string, string> = { budget: "Budget $", mid: "Mid-range $$", premium: "Premium $$$" };
 

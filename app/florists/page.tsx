@@ -6,6 +6,8 @@ import { prisma } from "../lib/prisma";
 import { US_STATES } from "../data/us-states";
 import { MapPin, ChevronRight, Flower2 } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 const SITE_URL = "https://mycareerly.com";
 
 export const metadata: Metadata = {

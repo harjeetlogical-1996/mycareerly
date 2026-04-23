@@ -7,6 +7,8 @@ import Footer from "../../components/Footer";
 import { prisma } from "../../lib/prisma";
 import { MapPin, Star, ChevronRight, Filter, CheckCircle2, Truck } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 const SITE_URL = "https://mycareerly.com";
 const FALLBACK = "https://images.unsplash.com/photo-1487530811015-780780169993?w=1400&q=80&auto=format&fit=crop";
 

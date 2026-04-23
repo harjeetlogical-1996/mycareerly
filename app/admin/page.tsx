@@ -2,6 +2,8 @@ import Link from "next/link";
 import { prisma } from "../lib/prisma";
 import { BookOpen, Store, Clock, CheckCircle2, XCircle, Star, TrendingUp, PenLine, Plus } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminDashboard() {
   const [
     totalArticles, pendingArticles, publishedArticles, rejectedArticles,

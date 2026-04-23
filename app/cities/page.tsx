@@ -6,6 +6,8 @@ import Footer from "../components/Footer";
 import { prisma } from "../lib/prisma";
 import { MapPin, ChevronRight, Star, Building2 } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 const SITE_URL = "https://mycareerly.com";
 
 export const metadata: Metadata = {

@@ -4,6 +4,8 @@ import { Plus, Pencil, ToggleLeft, ToggleRight, Tag } from "lucide-react";
 import { deleteCategory, toggleCategory } from "../../actions/categories";
 import DeleteButton from "../components/DeleteButton";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminCategoriesPage() {
   const categories = await prisma.category.findMany({ orderBy: { order: "asc" } });
 

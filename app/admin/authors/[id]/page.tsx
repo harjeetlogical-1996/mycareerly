@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { prisma } from "../../../lib/prisma";
 import { updateAuthor } from "../../../actions/authors";
 
+export const dynamic = "force-dynamic";
+
 export default async function EditAuthorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const author = await prisma.author.findUnique({ where: { id } });

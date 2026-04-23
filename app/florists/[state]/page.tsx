@@ -8,6 +8,8 @@ import { prisma } from "../../lib/prisma";
 import { US_STATES, findStateBySlug } from "../../data/us-states";
 import { MapPin, ChevronRight, Star, Building2, Flower2, CheckCircle2, Truck } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 const SITE_URL = "https://mycareerly.com";
 const FALLBACK = "https://images.unsplash.com/photo-1487530811015-780780169993?w=800&q=80&auto=format&fit=crop";
 

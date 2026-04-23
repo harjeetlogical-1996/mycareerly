@@ -5,6 +5,8 @@ import { prisma } from "../lib/prisma";
 import { ARTICLE_CATEGORIES } from "../data/articles";
 import ArticlesClient from "./ArticlesClient";
 
+export const dynamic = "force-dynamic";
+
 const SITE_URL = "https://mycareerly.com";
 
 export const metadata: Metadata = {

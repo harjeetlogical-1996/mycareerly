@@ -4,6 +4,8 @@ import { Plus, Pencil, User, ExternalLink } from "lucide-react";
 import { deleteAuthor } from "../../actions/authors";
 import DeleteButton from "../components/DeleteButton";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminAuthorsPage() {
   const authors = await prisma.author.findMany({ orderBy: { name: "asc" } });
 

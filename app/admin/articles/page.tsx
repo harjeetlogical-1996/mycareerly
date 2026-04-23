@@ -5,6 +5,8 @@ import { PenLine, Eye, Star, Clock, CheckCircle2, XCircle, Plus, BookOpen, Spark
 import { ARTICLE_CATEGORIES } from "../../data/articles";
 import DeleteButton from "../components/DeleteButton";
 
+export const dynamic = "force-dynamic";
+
 const STATUS_TABS = ["all", "pending", "published", "rejected"];
 
 function StatusBadge({ status }: { status: string }) {

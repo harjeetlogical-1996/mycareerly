@@ -5,6 +5,8 @@ import { prisma } from "../lib/prisma";
 import { CITIES, CATEGORIES } from "../data/listings";
 import ListingsClient from "./ListingsClient";
 
+export const dynamic = "force-dynamic";
+
 const SITE_URL = "https://mycareerly.com";
 
 export const metadata: Metadata = {
