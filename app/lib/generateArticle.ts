@@ -336,10 +336,11 @@ export async function generateArticle(
 // Parses markdown for image placeholders, generates each via
 // Gemini 3 Pro Image (Nano Banana Pro), saves to disk, returns updated content.
 
-// Fallback chain — Nano Banana Pro → Nano Banana → Imagen (latter is lower quota)
+// Fallback chain — stable models first, then preview (preview often gated to specific accounts)
 const IMAGE_MODEL_CHAIN = [
-  "gemini-3-pro-image-preview",       // Nano Banana Pro (latest, primary)
-  "gemini-2.5-flash-image",           // Nano Banana (stable fallback)
+  "gemini-2.5-flash-image",           // Nano Banana — widely available, stable primary
+  "gemini-2.5-flash-image-preview",   // Preview flavor if ever present
+  "gemini-3-pro-image-preview",       // Nano Banana Pro (may be gated per-account)
   "imagen-4.0-generate-001",          // Imagen (last resort, separate quota)
 ];
 
@@ -350,7 +351,11 @@ async function callImageModel(model: string, prompt: string, apiKey: string): Pr
     const body = JSON.stringify(
       isImagen
         ? { instances: [{ prompt }], parameters: { sampleCount: 1 } }
-        : { contents: [{ parts: [{ text: prompt }] }] }
+        : {
+            // Gemini 2.5+/3.x image models require explicit IMAGE response modality
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: { responseModalities: ["IMAGE"] },
+          }
     );
     const req = https.request(
       {
@@ -374,14 +379,26 @@ async function callImageModel(model: string, prompt: string, apiKey: string): Pr
               const b64 = p.inlineData?.data ?? p.inline_data?.data;
               if (b64) return resolve(Buffer.from(b64, "base64"));
             }
+            // Log failure reason so we can debug in Cloud Run logs
+            if (json.error) {
+              console.warn(`[generateImage] ${model} error:`, json.error.message || JSON.stringify(json.error).slice(0, 200));
+            } else if (json.promptFeedback?.blockReason) {
+              console.warn(`[generateImage] ${model} blocked:`, json.promptFeedback.blockReason);
+            } else {
+              console.warn(`[generateImage] ${model} returned no image. Response:`, JSON.stringify(json).slice(0, 300));
+            }
             resolve(null);
-          } catch {
+          } catch (e: any) {
+            console.warn(`[generateImage] ${model} parse error:`, e?.message);
             resolve(null);
           }
         });
       }
     );
-    req.on("error", () => resolve(null));
+    req.on("error", (e) => {
+      console.warn(`[generateImage] ${model} network error:`, e.message);
+      resolve(null);
+    });
     req.write(body);
     req.end();
   });
