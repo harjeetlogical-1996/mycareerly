@@ -5,7 +5,7 @@
 # from Google Secret Manager by the Cloud Run revision, NOT baked into the image.
 
 substitutions:
-  _REGION: asia-south1
+  _REGION: us-central1
   _SERVICE: mycareerly
   _REPO: mycareerly
 
