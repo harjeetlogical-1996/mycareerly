@@ -11,6 +11,14 @@ const STATE_TTL_MS = 10 * 60 * 1000;
 
 function getRedirectUri(req: NextRequest): string {
   // Must match byte-for-byte the redirect_uri sent in the /start route.
+  // On Cloud Run we read the forwarded host/proto so the result reflects
+  // the user's actual browser origin (mycareerly.com) rather than the
+  // internal *.run.app URL.
+  const fwdHost = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+  const fwdProto = req.headers.get("x-forwarded-proto") ?? req.nextUrl.protocol.replace(":", "");
+  if (fwdHost) {
+    return `${fwdProto}://${fwdHost}/api/pinterest/oauth/callback`;
+  }
   return `${req.nextUrl.origin}/api/pinterest/oauth/callback`;
 }
 

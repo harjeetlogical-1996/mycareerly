@@ -48,12 +48,17 @@ async function generateFullArticlePayload(opts: {
   const gen = await generateArticle(opts.title, opts.reference, opts.category);
   const slug = await uniqueSlug(gen.slug || toSlug(gen.title));
 
-  // Generate images (cover + inline). Runs in parallel.
+  // Generate images (cover + inline). Runs in parallel and is optimized in-place.
   const imgs = await generateArticleImages(slug, gen.content);
+
+  // Require at least one successfully-generated image before the article can be
+  // auto-published. If Gemini/Imagen quota is exhausted or the API key is stale,
+  // we don't want to ship articles with only the default stock cover.
+  const imagesOk = imgs.totalGenerated > 0;
 
   const { bio, email } = await getAuthorBio(opts.author);
 
-  // Always guarantee a cover image — either from Imagen or a known-good fallback
+  // Fall back to a known-good cover only when genuinely generating images failed.
   const coverImage = imgs.coverImage || DEFAULT_COVER;
 
   // Add 2 internal links to related existing articles
@@ -67,6 +72,7 @@ async function generateFullArticlePayload(opts: {
 
   return {
     slug,
+    imagesOk,
     articleData: {
       slug,
       title: gen.title,
@@ -109,20 +115,25 @@ export async function generateNow(formData: FormData) {
     );
 
     // Generate full article + all images
-    const { articleData, imageStats } = await generateFullArticlePayload({
+    const { articleData, imageStats, imagesOk } = await generateFullArticlePayload({
       title, reference, category, author,
     });
+
+    // Safety net: if every image generation failed (e.g., Gemini/Imagen quota
+    // exhausted, API key stale), never auto-publish — hold the article in
+    // 'pending' so the admin sees it and can retry or swap covers manually.
+    const finalStatus = publishNow && imagesOk ? "published" : "pending";
 
     const created = await prisma.article.create({
       data: {
         ...articleData,
         category,
-        status: publishNow ? "published" : "pending",
+        status: finalStatus,
         featured: false,
-        publishedAt: publishNow ? new Date().toISOString().split("T")[0] : "",
+        publishedAt: finalStatus === "published" ? new Date().toISOString().split("T")[0] : "",
       },
     });
-    if (publishNow) await finalizeArticlePublish(created.id);
+    if (finalStatus === "published") await finalizeArticlePublish(created.id);
 
     revalidatePath("/admin/articles");
     return {
@@ -215,20 +226,21 @@ export async function publishSelectedTopicsNow(formData: FormData) {
         authors.map((a) => ({ name: a.name, specialty: a.specialty, bio: a.bio }))
       );
 
-      const { articleData } = await generateFullArticlePayload({
+      const { articleData, imagesOk } = await generateFullArticlePayload({
         title, reference: "", category, author,
       });
 
+      const bulkStatus = imagesOk ? "published" : "pending";
       const createdBulk = await prisma.article.create({
         data: {
           ...articleData,
           category,
-          status: "published",
+          status: bulkStatus,
           featured: false,
-          publishedAt: new Date().toISOString().split("T")[0],
+          publishedAt: bulkStatus === "published" ? new Date().toISOString().split("T")[0] : "",
         },
       });
-      await finalizeArticlePublish(createdBulk.id);
+      if (bulkStatus === "published") await finalizeArticlePublish(createdBulk.id);
       succeeded++;
     } catch (e: any) {
       failed++;
@@ -315,20 +327,21 @@ export async function publishScheduledNow(id: string) {
       author = author === "auto" ? pick.author : author;
     }
 
-    const { articleData } = await generateFullArticlePayload({
+    const { articleData, imagesOk } = await generateFullArticlePayload({
       title: s.title, reference: s.reference, category, author,
     });
 
+    const schedStatus = imagesOk ? "published" : "pending";
     const article = await prisma.article.create({
       data: {
         ...articleData,
         category,
-        status: "published",
+        status: schedStatus,
         featured: false,
-        publishedAt: new Date().toISOString().split("T")[0],
+        publishedAt: schedStatus === "published" ? new Date().toISOString().split("T")[0] : "",
       },
     });
-    await finalizeArticlePublish(article.id);
+    if (schedStatus === "published") await finalizeArticlePublish(article.id);
 
     await prisma.scheduledArticle.update({
       where: { id: s.id },
@@ -386,20 +399,21 @@ export async function publishAllPendingNow() {
         author = author === "auto" ? pick.author : author;
       }
 
-      const { articleData } = await generateFullArticlePayload({
+      const { articleData, imagesOk } = await generateFullArticlePayload({
         title: s.title, reference: s.reference, category, author,
       });
 
+      const schedStatus = imagesOk ? "published" : "pending";
       const article = await prisma.article.create({
         data: {
           ...articleData,
           category,
-          status: "published",
+          status: schedStatus,
           featured: false,
-          publishedAt: new Date().toISOString().split("T")[0],
+          publishedAt: schedStatus === "published" ? new Date().toISOString().split("T")[0] : "",
         },
       });
-      await finalizeArticlePublish(article.id);
+      if (schedStatus === "published") await finalizeArticlePublish(article.id);
 
       await prisma.scheduledArticle.update({
         where: { id: s.id },
@@ -455,20 +469,21 @@ export async function runDueScheduled() {
         author = author === "auto" ? pick.author : author;
       }
 
-      const { articleData } = await generateFullArticlePayload({
+      const { articleData, imagesOk } = await generateFullArticlePayload({
         title: s.title, reference: s.reference, category, author,
       });
 
+      const schedStatus = imagesOk ? "published" : "pending";
       const article = await prisma.article.create({
         data: {
           ...articleData,
           category,
-          status: "published",
+          status: schedStatus,
           featured: false,
-          publishedAt: new Date().toISOString().split("T")[0],
+          publishedAt: schedStatus === "published" ? new Date().toISOString().split("T")[0] : "",
         },
       });
-      await finalizeArticlePublish(article.id);
+      if (schedStatus === "published") await finalizeArticlePublish(article.id);
 
       await prisma.scheduledArticle.update({
         where: { id: s.id },

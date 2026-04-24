@@ -17,11 +17,16 @@ const SCOPES = [
 ].join(",");
 
 function getRedirectUri(req: NextRequest): string {
-  // Always use the current request's origin so whichever host the user
-  // landed on (mycareerly.com, www.mycareerly.com, the *.run.app URL,
-  // or localhost) is echoed back to Pinterest exactly. The redirect_uri
-  // MUST byte-for-byte match one of the URIs registered in the Pinterest
-  // developer console; any mismatch yields "redirect URI does not match".
+  // On Cloud Run the inbound request is proxied, so req.nextUrl.origin can
+  // resolve to the internal *.run.app URL even when the user is on
+  // https://www.mycareerly.com. We trust the X-Forwarded-* headers set by
+  // Google's load balancer to reconstruct the user-facing origin, and only
+  // fall back to req.nextUrl.origin when those aren't present (local dev).
+  const fwdHost = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+  const fwdProto = req.headers.get("x-forwarded-proto") ?? req.nextUrl.protocol.replace(":", "");
+  if (fwdHost) {
+    return `${fwdProto}://${fwdHost}/api/pinterest/oauth/callback`;
+  }
   return `${req.nextUrl.origin}/api/pinterest/oauth/callback`;
 }
 

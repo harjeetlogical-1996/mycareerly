@@ -1,6 +1,7 @@
 import https from "https";
 import fs from "fs";
 import path from "path";
+import sharp from "sharp";
 import { getGeminiApiKey } from "./gemini";
 
 // Fallback chain: try primary → fallback → last resort
@@ -461,7 +462,9 @@ export async function generateArticleImages(
     return `${alt}. Professional photography, high quality, natural lighting, editorial style, clean composition, vibrant yet natural colors, shallow depth of field, bright and crisp.`;
   });
 
-  // Generate all images in parallel
+  // Generate all images in parallel, then pipe each through sharp for
+  // compression + resize so we don't ship multi-MB originals. Typical
+  // reduction: 1-3 MB Gemini output -> 100-250 KB optimized JPEG.
   const results = await Promise.all(
     imagePrompts.map(async (prompt, i) => {
       const bytes = await generateImageBytes(prompt);
@@ -469,10 +472,24 @@ export async function generateArticleImages(
       const filename = `${slug}-${i + 1}.jpg`;
       const filepath = path.join(outputDir, filename);
       try {
-        fs.writeFileSync(filepath, bytes);
+        // Optimize: 1600px max width (enough for 2x retina on article cards),
+        // JPEG quality 80 with mozjpeg encoding = visually identical, ~85% smaller.
+        const optimized = await sharp(bytes)
+          .rotate() // honor EXIF orientation
+          .resize({ width: 1600, withoutEnlargement: true })
+          .jpeg({ quality: 80, progressive: true, mozjpeg: true })
+          .toBuffer();
+        fs.writeFileSync(filepath, optimized);
         return `/images/articles/${filename}`;
-      } catch {
-        return null;
+      } catch (e: any) {
+        console.warn(`[generateArticleImages] optimize failed for ${filename}: ${e?.message}`);
+        // Fallback: write raw bytes so we don't lose the image entirely
+        try {
+          fs.writeFileSync(filepath, bytes);
+          return `/images/articles/${filename}`;
+        } catch {
+          return null;
+        }
       }
     })
   );
