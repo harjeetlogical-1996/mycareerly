@@ -5,11 +5,13 @@ const SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET ?? "fallback-secret-change-me"
 );
 
+const COOKIE_NAME = "mycareerly_admin_token";
+
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   if (pathname.startsWith("/admin") && !pathname.startsWith("/admin/login")) {
-    const token = req.cookies.get("florencia_admin_token")?.value;
+    const token = req.cookies.get(COOKIE_NAME)?.value;
 
     if (!token) {
       return NextResponse.redirect(new URL("/admin/login", req.url));
@@ -20,7 +22,7 @@ export async function proxy(req: NextRequest) {
       return NextResponse.next();
     } catch {
       const res = NextResponse.redirect(new URL("/admin/login", req.url));
-      res.cookies.delete("florencia_admin_token");
+      res.cookies.delete(COOKIE_NAME);
       return res;
     }
   }
