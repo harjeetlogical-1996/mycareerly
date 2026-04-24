@@ -23,12 +23,22 @@ type Account = {
 
 type Board = { id: string; name: string };
 
-export default function AccountCard({ account, categories }: { account: Account; categories: string[] }) {
+export default function AccountCard({
+  account,
+  categories,
+  initialBoards = [],
+}: {
+  account: Account;
+  categories: string[];
+  initialBoards?: Board[];
+}) {
   const [pending, start] = useTransition();
   const [label, setLabel] = useState(account.label);
   const [defaultBoardId, setDefaultBoardId] = useState(account.defaultBoardId);
   const [autoPost, setAutoPost] = useState(account.autoPostEnabled);
-  const [boards, setBoards] = useState<Board[] | null>(null);
+  // Boards are pre-loaded server-side on page render, so the dropdown is ready
+  // immediately. Setting to null only when we explicitly want to force a reload.
+  const [boards, setBoards] = useState<Board[] | null>(initialBoards.length > 0 ? initialBoards : null);
   const [mappings, setMappings] = useState<Record<string, { boardId: string; boardName: string }>>(
     Object.fromEntries(account.boardMaps.map((m) => [m.category, { boardId: m.boardId, boardName: m.boardName }]))
   );
@@ -114,30 +124,56 @@ export default function AccountCard({ account, categories }: { account: Account;
           />
         </div>
         <div>
-          <label className="block text-[10px] font-semibold text-[#6B6B6B] uppercase tracking-wider mb-1">Default Board</label>
-          {boards ? (
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-[10px] font-semibold text-[#6B6B6B] uppercase tracking-wider">Default Board</label>
+            {boards && boards.length > 0 && (
+              <button
+                type="button"
+                onClick={loadBoards}
+                className="text-[10px] font-semibold text-[#6B6B6B] hover:text-[#E60023] inline-flex items-center gap-1"
+                title="Reload from Pinterest (after creating a new board)"
+              >
+                <RefreshCw size={9} /> Refresh
+              </button>
+            )}
+          </div>
+          {boards && boards.length > 0 ? (
             <select
               value={defaultBoardId}
               onChange={(e) => setDefaultBoardId(e.target.value)}
               className="w-full px-2.5 py-1.5 border border-[#E8E4DF] rounded-lg text-sm focus:border-[#E60023] outline-none"
             >
-              <option value="">— select —</option>
+              <option value="">— select board —</option>
               {boards.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
-          ) : (
-            <div className="flex gap-1">
-              <input
-                value={defaultBoardId}
-                onChange={(e) => setDefaultBoardId(e.target.value)}
-                placeholder="board id"
-                className="flex-1 px-2.5 py-1.5 border border-[#E8E4DF] rounded-lg text-sm font-mono focus:border-[#E60023] outline-none"
-              />
+          ) : boards && boards.length === 0 ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-[#8A8A8A] italic">No boards on this account yet.</span>
+              <a
+                href="https://www.pinterest.com/?add-board"
+                target="_blank"
+                rel="noopener"
+                className="text-[10px] font-semibold text-[#E60023] hover:underline whitespace-nowrap"
+              >
+                Create on Pinterest →
+              </a>
               <button
                 type="button"
                 onClick={loadBoards}
-                className="text-xs font-semibold text-[#E60023] hover:underline whitespace-nowrap"
+                className="text-[10px] font-semibold text-[#6B6B6B] hover:text-[#E60023] inline-flex items-center gap-1"
               >
-                Load
+                <RefreshCw size={9} /> Reload
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-[#8A8A8A] italic">Fetching…</span>
+              <button
+                type="button"
+                onClick={loadBoards}
+                className="text-[10px] font-semibold text-[#E60023] hover:underline"
+              >
+                Load now
               </button>
             </div>
           )}
@@ -197,7 +233,7 @@ export default function AccountCard({ account, categories }: { account: Account;
           <p className="text-xs font-bold text-[#1A1A1A] mb-2">Category → Board mapping</p>
           <p className="text-[10px] text-[#6B6B6B] mb-3">
             Route article categories to specific boards. Falls back to default board if unmapped.
-            {!boards && <> <button onClick={loadBoards} className="text-[#E60023] underline">Load boards first</button>.</>}
+            {(!boards || boards.length === 0) && <> <button onClick={loadBoards} className="text-[#E60023] underline">Load boards first</button>.</>}
           </p>
           <div className="space-y-2">
             {categories.map((cat) => {
@@ -205,11 +241,11 @@ export default function AccountCard({ account, categories }: { account: Account;
               return (
                 <div key={cat} className="grid grid-cols-[120px_1fr] gap-2 items-center">
                   <span className="text-xs font-semibold text-[#4A4A4A]">{cat}</span>
-                  {boards ? (
+                  {boards && boards.length > 0 ? (
                     <select
                       value={current.boardId}
                       onChange={(e) => {
-                        const board = boards.find((b) => b.id === e.target.value);
+                        const board = boards!.find((b) => b.id === e.target.value);
                         setMappings({ ...mappings, [cat]: { boardId: e.target.value, boardName: board?.name || "" } });
                       }}
                       className="px-2 py-1.5 border border-[#E8E4DF] rounded-lg text-xs focus:border-[#E60023] outline-none"

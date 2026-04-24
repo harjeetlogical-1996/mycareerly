@@ -1,11 +1,29 @@
 import Link from "next/link";
 import { prisma } from "../../../lib/prisma";
 import { getSetting, SETTING_KEYS } from "../../../lib/settings";
+import { getValidAccessToken } from "../../../lib/pinterest/tokens";
+import { pinterestFetch } from "../../../lib/pinterest/client";
 import AccountCard from "./AccountCard";
 import ConnectForm from "./ConnectForm";
 import { Users, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * Fetch a Pinterest account's boards. Returns [] on any auth / API failure
+ * so the page still renders — the user can hit "Reload boards" in the card
+ * to see the real error, and everything else on the page stays usable.
+ */
+async function fetchBoardsForAccount(accountId: string): Promise<Array<{ id: string; name: string }>> {
+  try {
+    const token = await getValidAccessToken(accountId);
+    const res: any = await pinterestFetch("/boards?page_size=100", token);
+    const items: any[] = res?.items || [];
+    return items.map((b) => ({ id: b.id, name: b.name }));
+  } catch {
+    return [];
+  }
+}
 
 export default async function PinterestAccountsPage({
   searchParams,
@@ -23,6 +41,17 @@ export default async function PinterestAccountsPage({
   const articleCategories = categories.length
     ? categories.map((c) => c.name)
     : ["Care Guide", "Seasonal", "DIY", "Wedding", "Gifting", "Expert Tips", "Stories"];
+
+  // Pre-fetch each active account's Pinterest boards in parallel so the
+  // AccountCard can show a real dropdown immediately — no "Load boards" click.
+  const activeAccounts = accounts.filter((a) => a.active);
+  const boardLists = await Promise.all(
+    activeAccounts.map((a) => fetchBoardsForAccount(a.id))
+  );
+  const boardsByAccount: Record<string, Array<{ id: string; name: string }>> = {};
+  activeAccounts.forEach((a, i) => {
+    boardsByAccount[a.id] = boardLists[i];
+  });
 
   return (
     <div className="p-8">
@@ -73,7 +102,12 @@ export default async function PinterestAccountsPage({
           </div>
         ) : (
           accounts.map((a) => (
-            <AccountCard key={a.id} account={a} categories={articleCategories} />
+            <AccountCard
+              key={a.id}
+              account={a}
+              categories={articleCategories}
+              initialBoards={boardsByAccount[a.id] ?? []}
+            />
           ))
         )}
       </div>
