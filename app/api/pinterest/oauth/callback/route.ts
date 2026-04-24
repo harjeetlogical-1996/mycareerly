@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession } from "../../../../lib/auth";
 import { prisma } from "../../../../lib/prisma";
 import { getSetting, SETTING_KEYS } from "../../../../lib/settings";
-import { SITE_URL } from "../../../../lib/site";
 import { exchangeCodeForTokens } from "../../../../lib/pinterest/tokens";
 import { pinterestFetch } from "../../../../lib/pinterest/client";
 
@@ -11,10 +10,7 @@ export const dynamic = "force-dynamic";
 const STATE_TTL_MS = 10 * 60 * 1000;
 
 function getRedirectUri(req: NextRequest): string {
-  const envUrl = SITE_URL.replace(/\/$/, "");
-  if (envUrl && !/localhost|127\.0\.0\.1/i.test(envUrl) && req.nextUrl.hostname === new URL(envUrl).hostname) {
-    return `${envUrl}/api/pinterest/oauth/callback`;
-  }
+  // Must match byte-for-byte the redirect_uri sent in the /start route.
   return `${req.nextUrl.origin}/api/pinterest/oauth/callback`;
 }
 

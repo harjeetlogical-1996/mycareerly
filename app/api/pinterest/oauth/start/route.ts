@@ -3,7 +3,6 @@ import crypto from "node:crypto";
 import { getAdminSession } from "../../../../lib/auth";
 import { prisma } from "../../../../lib/prisma";
 import { getSetting, SETTING_KEYS } from "../../../../lib/settings";
-import { SITE_URL } from "../../../../lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -18,13 +17,12 @@ const SCOPES = [
 ].join(",");
 
 function getRedirectUri(req: NextRequest): string {
-  // Prefer env/SITE_URL for prod, fall back to current origin for local dev.
-  const envUrl = SITE_URL.replace(/\/$/, "");
-  if (envUrl && !/localhost|127\.0\.0\.1/i.test(envUrl) && req.nextUrl.hostname === new URL(envUrl).hostname) {
-    return `${envUrl}/api/pinterest/oauth/callback`;
-  }
-  const origin = req.nextUrl.origin;
-  return `${origin}/api/pinterest/oauth/callback`;
+  // Always use the current request's origin so whichever host the user
+  // landed on (mycareerly.com, www.mycareerly.com, the *.run.app URL,
+  // or localhost) is echoed back to Pinterest exactly. The redirect_uri
+  // MUST byte-for-byte match one of the URIs registered in the Pinterest
+  // developer console; any mismatch yields "redirect URI does not match".
+  return `${req.nextUrl.origin}/api/pinterest/oauth/callback`;
 }
 
 export async function GET(req: NextRequest) {
