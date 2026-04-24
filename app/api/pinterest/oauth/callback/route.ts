@@ -9,26 +9,32 @@ export const dynamic = "force-dynamic";
 
 const STATE_TTL_MS = 10 * 60 * 1000;
 
-function getRedirectUri(req: NextRequest): string {
-  // Must match byte-for-byte the redirect_uri sent in the /start route.
-  // On Cloud Run we read the forwarded host/proto so the result reflects
-  // the user's actual browser origin (mycareerly.com) rather than the
-  // internal *.run.app URL.
+/**
+ * Build an absolute URL based on the user-facing host (read from the
+ * X-Forwarded-* headers that Google's load balancer sets), not the
+ * internal Cloud Run container address (which is 0.0.0.0:8080).
+ */
+function publicOrigin(req: NextRequest): string {
   const fwdHost = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
   const fwdProto = req.headers.get("x-forwarded-proto") ?? req.nextUrl.protocol.replace(":", "");
-  if (fwdHost) {
-    return `${fwdProto}://${fwdHost}/api/pinterest/oauth/callback`;
+  if (fwdHost && !fwdHost.startsWith("0.0.0.0") && !fwdHost.startsWith("127.")) {
+    return `${fwdProto}://${fwdHost}`;
   }
-  return `${req.nextUrl.origin}/api/pinterest/oauth/callback`;
+  return req.nextUrl.origin;
+}
+
+function getRedirectUri(req: NextRequest): string {
+  // Must match byte-for-byte the redirect_uri sent in the /start route.
+  return `${publicOrigin(req)}/api/pinterest/oauth/callback`;
 }
 
 function backTo(req: NextRequest, qs: string): NextResponse {
-  return NextResponse.redirect(new URL(`/admin/pinterest/accounts?${qs}`, req.url));
+  return NextResponse.redirect(`${publicOrigin(req)}/admin/pinterest/accounts?${qs}`);
 }
 
 export async function GET(req: NextRequest) {
   const session = await getAdminSession();
-  if (!session) return NextResponse.redirect(new URL("/admin/login", req.url));
+  if (!session) return NextResponse.redirect(`${publicOrigin(req)}/admin/login`);
 
   const code = req.nextUrl.searchParams.get("code");
   const state = req.nextUrl.searchParams.get("state");

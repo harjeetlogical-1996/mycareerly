@@ -16,28 +16,32 @@ const SCOPES = [
   "pins:write",
 ].join(",");
 
-function getRedirectUri(req: NextRequest): string {
-  // On Cloud Run the inbound request is proxied, so req.nextUrl.origin can
-  // resolve to the internal *.run.app URL even when the user is on
-  // https://www.mycareerly.com. We trust the X-Forwarded-* headers set by
-  // Google's load balancer to reconstruct the user-facing origin, and only
-  // fall back to req.nextUrl.origin when those aren't present (local dev).
+/**
+ * User-facing origin via X-Forwarded-* (set by Google's load balancer on
+ * Cloud Run). `req.nextUrl.origin` inside the container can be the internal
+ * bind address (0.0.0.0:8080) and must not be echoed back to the browser.
+ */
+function publicOrigin(req: NextRequest): string {
   const fwdHost = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
   const fwdProto = req.headers.get("x-forwarded-proto") ?? req.nextUrl.protocol.replace(":", "");
-  if (fwdHost) {
-    return `${fwdProto}://${fwdHost}/api/pinterest/oauth/callback`;
+  if (fwdHost && !fwdHost.startsWith("0.0.0.0") && !fwdHost.startsWith("127.")) {
+    return `${fwdProto}://${fwdHost}`;
   }
-  return `${req.nextUrl.origin}/api/pinterest/oauth/callback`;
+  return req.nextUrl.origin;
+}
+
+function getRedirectUri(req: NextRequest): string {
+  return `${publicOrigin(req)}/api/pinterest/oauth/callback`;
 }
 
 export async function GET(req: NextRequest) {
   const session = await getAdminSession();
-  if (!session) return NextResponse.redirect(new URL("/admin/login", req.url));
+  if (!session) return NextResponse.redirect(`${publicOrigin(req)}/admin/login`);
 
   const clientId = await getSetting(SETTING_KEYS.PINTEREST_CLIENT_ID);
   if (!clientId) {
     return NextResponse.redirect(
-      new URL("/admin/pinterest/settings?error=missing_client_id", req.url)
+      `${publicOrigin(req)}/admin/pinterest/settings?error=missing_client_id`
     );
   }
 
