@@ -92,7 +92,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Load analytics + verification settings (admin-configurable)
+  // Load analytics + verification + branding settings (admin-configurable)
   const s = await getSettings([
     SETTING_KEYS.GA4_MEASUREMENT_ID,
     SETTING_KEYS.GSC_VERIFICATION,
@@ -101,6 +101,7 @@ export default async function RootLayout({
     SETTING_KEYS.PINTEREST_VERIFICATION,
     SETTING_KEYS.FB_PIXEL_ID,
     SETTING_KEYS.CLARITY_ID,
+    SETTING_KEYS.FAVICON_URL,
   ]);
 
   const ga4 = s[SETTING_KEYS.GA4_MEASUREMENT_ID];
@@ -110,6 +111,7 @@ export default async function RootLayout({
   const pinterest = s[SETTING_KEYS.PINTEREST_VERIFICATION];
   const fbPixel = s[SETTING_KEYS.FB_PIXEL_ID];
   const clarity = s[SETTING_KEYS.CLARITY_ID];
+  const faviconUrl = s[SETTING_KEYS.FAVICON_URL];
 
   return (
     <html lang="en-US" className={`${poppins.variable} h-full antialiased scroll-smooth`} data-scroll-behavior="smooth">
@@ -121,6 +123,15 @@ export default async function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         {/* RSS / Atom feed (future-proof) */}
         <link rel="alternate" type="application/rss+xml" title="MyCareerly Articles" href="/feed.xml" />
+
+        {/* Favicon — admin-configurable, overrides Next.js default app/favicon.ico */}
+        {faviconUrl && (
+          <>
+            <link rel="icon" href={faviconUrl} />
+            <link rel="shortcut icon" href={faviconUrl} />
+            <link rel="apple-touch-icon" href={faviconUrl} />
+          </>
+        )}
 
         {/* Search engine verification tags — populated from admin settings */}
         {gsc && <meta name="google-site-verification" content={gsc} />}
