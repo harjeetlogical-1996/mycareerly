@@ -33,35 +33,65 @@ const HOOK_ANGLES = [
  * Returns an array of distinct headlines, each from a different angle.
  */
 export async function generatePinterestHooks(
-  article: { title: string; category: string; excerpt: string; tags: string[] },
+  article: { title: string; category: string; excerpt: string; tags: string[]; content?: string },
   count: number = 6
 ): Promise<string[]> {
   const apiKey = await getApiKey();
   const n = Math.min(Math.max(count, 3), 8);
   const angles = HOOK_ANGLES.slice(0, n);
 
-  const prompt = `You are a top Pinterest copywriter for a US flower-shop directory.
-Write ${n} DIFFERENT clickable Pinterest pin headlines (text overlays) for this article.
+  // Strip markdown/HTML from content and grab a meaty chunk so the AI has real facts to work with,
+  // not just the generic title/excerpt. This is what stops "care guide" generic fallbacks.
+  const cleanContent = (article.content || "")
+    .replace(/!\[.*?\]\([^)]+\)/g, "") // remove markdown images
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1") // unwrap markdown links
+    .replace(/<[^>]+>/g, "") // strip any HTML
+    .replace(/\s+/g, " ")
+    .trim();
+  // Send up to ~2000 chars — enough for the AI to extract specific facts/numbers/names
+  const contentSnippet = cleanContent.slice(0, 2000);
 
-Article title: ${article.title}
+  const prompt = `You are a world-class Pinterest copywriter for MyCareerly, a US flower-shop directory. Your one job: write click-worthy pin headlines that are SPECIFIC to this article — not generic flower advice that could work for any post.
+
+==================== THE ARTICLE ====================
+Title: ${article.title}
 Category: ${article.category}
-Excerpt: ${article.excerpt.slice(0, 400)}
 Tags: ${article.tags.slice(0, 8).join(", ")}
+Excerpt: ${article.excerpt.slice(0, 400)}
 
-Each headline should use a different angle:
+Article content (first 2000 chars):
+"""
+${contentSnippet}
+"""
+==================== END ARTICLE ====================
+
+STEP 1 — Read the article carefully. Identify the SPECIFIC hook:
+- What flower(s) are named in the title? (e.g., "daylily", "peonies", "roses")
+- What surprising fact or number appears? (e.g., "only 24 hours", "lasts 2 weeks", "7 types")
+- What problem does the article solve or what question does it answer?
+- What's the ONE thing a reader would say "wow, I didn't know that" about?
+
+STEP 2 — Write ${n} DIFFERENT Pinterest pin headlines using these angles:
 ${angles.map((a, i) => `${i + 1}. ${a.name} — e.g., "${a.example}"`).join("\n")}
 
-Rules for every headline:
-- 4 to 9 words (max ~60 characters)
-- Pinterest-style: curiosity-driven, actionable, uses power words
-- Title Case or Sentence case — NOT all caps, NOT all lowercase
-- Can include ONE relevant emoji at start or end (optional, keep natural — not every headline needs one)
-- No quotes in the output, no hashtags, no "click here", no URLs
-- Specific to THIS article's topic — not generic flower advice
-- Each headline must be distinct from the others in phrasing and angle
+==================== ABSOLUTE RULES ====================
+- EVERY headline MUST mention the specific flower(s) or specific angle from THIS article. If the article is about daylilies, the word "daylily" or "daylilies" (or a synonym like "day lily") should appear in at least 4 of the ${n} headlines. Same principle for any other flower.
+- If the article has a striking fact (a number, "only one day", etc.), bake it into at least 2 headlines.
+- Do NOT output generic headlines like "Beautiful Flower Care Guide", "My Secret to Gorgeous Blooms", "Essential Flower Tips" — these are REJECTED. They could describe 10,000 articles. Be specific to THIS one.
+- Each headline: 4–9 words, max ~60 characters.
+- Title Case or Sentence case. No ALL CAPS. No all lowercase.
+- One relevant emoji (optional, at start or end). Not every headline needs an emoji.
+- No quotation marks, hashtags, "click here", URLs, or "read more".
+- Each headline distinct from the others — different word choices, different angles.
 
-Output ONLY a JSON array of ${n} strings, nothing else. No markdown fences, no explanation.
-Example format: ["First headline here", "Second headline here", "Third headline here"]`;
+==================== SELF-CHECK BEFORE OUTPUT ====================
+Mentally verify each of your ${n} headlines by asking:
+"If I swapped this article for ANY other flower article on the site, would this headline still fit?"
+If yes → headline is too generic, rewrite it to be specific.
+
+==================== OUTPUT FORMAT ====================
+Output ONLY a JSON array of ${n} strings. No markdown fences. No explanation. No preamble.
+Example: ["Why Daylilies Bloom for Just 24 Hours", "The One-Day Wonder: A Daylily Guide", ...]`;
 
   const res = await fetch(ENDPOINT(TEXT_MODEL) + `?key=${encodeURIComponent(apiKey)}`, {
     method: "POST",
@@ -170,7 +200,7 @@ function parseHooksFromGemini(raw: string, expected: number): string[] {
 /**
  * Legacy single-hook generator. Kept for backward compat — uses multi-hook under the hood.
  */
-export async function generatePinterestHook(article: { title: string; category: string; excerpt: string; tags: string[] }, variantIndex: number = 0): Promise<string> {
+export async function generatePinterestHook(article: { title: string; category: string; excerpt: string; tags: string[]; content?: string }, variantIndex: number = 0): Promise<string> {
   const hooks = await generatePinterestHooks(article, 6);
   return hooks[variantIndex % hooks.length];
 }
@@ -245,7 +275,7 @@ export async function generatePinterestImage(
   let overlayHook: string | null = null;
   if (options.withOverlay) {
     overlayHook = options.customHook?.trim() || await generatePinterestHook(
-      { title: article.title, category: article.category, excerpt: article.excerpt, tags },
+      { title: article.title, category: article.category, excerpt: article.excerpt, tags, content: article.content },
       variantIndex
     );
   }

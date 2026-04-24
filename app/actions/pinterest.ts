@@ -247,7 +247,7 @@ export async function generateHookOptions(articleId: string, count: number = 6):
     if (!article) return { ok: false, error: "Article not found" };
     const tags = (() => { try { return JSON.parse(article.tags) as string[]; } catch { return []; } })();
     const hooks = await generatePinterestHooks(
-      { title: article.title, category: article.category, excerpt: article.excerpt, tags },
+      { title: article.title, category: article.category, excerpt: article.excerpt, tags, content: article.content },
       count
     );
     return { ok: true, hooks };
@@ -266,7 +266,7 @@ export async function previewPinHook(articleId: string, variantIndex: number = 0
     if (!article) return { ok: false, error: "Article not found" };
     const tags = (() => { try { return JSON.parse(article.tags) as string[]; } catch { return []; } })();
     const hook = await generatePinterestHook(
-      { title: article.title, category: article.category, excerpt: article.excerpt, tags },
+      { title: article.title, category: article.category, excerpt: article.excerpt, tags, content: article.content },
       variantIndex
     );
     return { ok: true, hook };
