@@ -1,4 +1,27 @@
-const BASE = "https://api.pinterest.com/v5";
+const PROD_BASE = "https://api.pinterest.com/v5";
+const SANDBOX_BASE = "https://api-sandbox.pinterest.com/v5";
+
+/**
+ * Pinterest "Trial" apps can authenticate + read boards/user info on the
+ * production API, but any POST to /pins gets blocked with:
+ *   403 code 29: "Apps with Trial access may not create Pins in production"
+ * The workaround is to send pin creation requests to the sandbox API at
+ * api-sandbox.pinterest.com, which mirrors the same schema but doesn't
+ * actually publish to real Pinterest. Good for testing the full flow
+ * while waiting for Standard access approval.
+ *
+ * Toggle with env var PINTEREST_USE_SANDBOX=true — only affects pin-write
+ * endpoints; reads (boards, user_account) stay on production so the admin
+ * UI still shows real data.
+ */
+function baseFor(path: string, method: string): string {
+  const sandbox = process.env.PINTEREST_USE_SANDBOX === "true";
+  if (!sandbox) return PROD_BASE;
+  // Only route blocked write endpoints to sandbox.
+  const m = method.toUpperCase();
+  const isPinWrite = /^\/pins(\/|$|\?)/i.test(path) && (m === "POST" || m === "PATCH" || m === "DELETE");
+  return isPinWrite ? SANDBOX_BASE : PROD_BASE;
+}
 
 export class PinterestApiError extends Error {
   status: number;
@@ -15,7 +38,8 @@ export async function pinterestFetch(
   accessToken: string,
   init: RequestInit = {}
 ): Promise<any> {
-  const url = path.startsWith("http") ? path : `${BASE}${path}`;
+  const method = (init.method || "GET") as string;
+  const url = path.startsWith("http") ? path : `${baseFor(path, method)}${path}`;
   const headers: Record<string, string> = {
     Authorization: `Bearer ${accessToken}`,
     "Content-Type": "application/json",
