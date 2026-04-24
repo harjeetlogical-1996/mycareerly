@@ -116,8 +116,12 @@ ${SITE_URL}/api/pinterest/oauth/callback`}
         <div className="bg-white border border-[#E8E4DF] rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-4">
             <Sparkles size={16} className="text-[#E60023]" />
-            <h2 className="text-sm font-bold text-[#1A1A1A]">AI Image Generation (Nano Banana)</h2>
+            <h2 className="text-sm font-bold text-[#1A1A1A]">Gemini API Key (used by blogs + Pinterest)</h2>
           </div>
+          <p className="text-xs text-[#6B6B6B] mb-3">
+            Single key powers AI article generation, Pinterest hook writing, and Nano Banana pin image generation.
+            Update here once — everything picks it up instantly.
+          </p>
           <div>
             <label className="block text-xs font-semibold text-[#6B6B6B] mb-1">
               Gemini API Key {geminiKey && <span className="text-green-600 ml-1">(set — leave blank to keep)</span>}

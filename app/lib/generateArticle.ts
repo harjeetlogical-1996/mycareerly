@@ -1,8 +1,7 @@
 import https from "https";
 import fs from "fs";
 import path from "path";
-
-const GEMINI_KEY = "AIzaSyB5jteecTdcJuiWOXlj3uIm4wDHS6i6gEo";
+import { getGeminiApiKey } from "./gemini";
 
 // Fallback chain: try primary → fallback → last resort
 // Primary = Gemini 3.1 Flash Lite (fast, cheap, latest generation)
@@ -30,7 +29,7 @@ function isTransientError(msg: string): boolean {
   );
 }
 
-async function callModel(model: string, prompt: string, maxTokens: number): Promise<string> {
+async function callModel(model: string, prompt: string, maxTokens: number, apiKey: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const body = JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
@@ -39,7 +38,7 @@ async function callModel(model: string, prompt: string, maxTokens: number): Prom
     const req = https.request(
       {
         hostname: "generativelanguage.googleapis.com",
-        path: `/v1beta/models/${model}:generateContent?key=${GEMINI_KEY}`,
+        path: `/v1beta/models/${model}:generateContent?key=${apiKey}`,
         method: "POST",
         headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) },
       },
@@ -67,6 +66,7 @@ async function callModel(model: string, prompt: string, maxTokens: number): Prom
 
 async function callGemini(prompt: string, maxTokens = 16384): Promise<string> {
   let lastError: Error | null = null;
+  const apiKey = await getGeminiApiKey();
 
   for (let modelIdx = 0; modelIdx < MODEL_CHAIN.length; modelIdx++) {
     const model = MODEL_CHAIN[modelIdx];
@@ -74,7 +74,7 @@ async function callGemini(prompt: string, maxTokens = 16384): Promise<string> {
     // Try each model up to 3 times with exponential backoff
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        return await callModel(model, prompt, maxTokens);
+        return await callModel(model, prompt, maxTokens, apiKey);
       } catch (e: any) {
         lastError = e;
         const msg = e?.message ?? "";
@@ -343,10 +343,10 @@ const IMAGE_MODEL_CHAIN = [
   "imagen-4.0-generate-001",          // Imagen (last resort, separate quota)
 ];
 
-async function callImageModel(model: string, prompt: string): Promise<Buffer | null> {
+async function callImageModel(model: string, prompt: string, apiKey: string): Promise<Buffer | null> {
   return new Promise((resolve) => {
     const isImagen = model.startsWith("imagen");
-    const path = `/v1beta/models/${model}:${isImagen ? "predict" : "generateContent"}?key=${GEMINI_KEY}`;
+    const path = `/v1beta/models/${model}:${isImagen ? "predict" : "generateContent"}?key=${apiKey}`;
     const body = JSON.stringify(
       isImagen
         ? { instances: [{ prompt }], parameters: { sampleCount: 1 } }
@@ -388,8 +388,9 @@ async function callImageModel(model: string, prompt: string): Promise<Buffer | n
 }
 
 async function generateImageBytes(prompt: string): Promise<Buffer | null> {
+  const apiKey = await getGeminiApiKey();
   for (const model of IMAGE_MODEL_CHAIN) {
-    const bytes = await callImageModel(model, prompt);
+    const bytes = await callImageModel(model, prompt, apiKey);
     if (bytes) return bytes;
   }
   return null;

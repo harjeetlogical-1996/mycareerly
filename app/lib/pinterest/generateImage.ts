@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
 import { prisma } from "../prisma";
-import { getSetting, SETTING_KEYS } from "../settings";
+import { getGeminiApiKey } from "../gemini";
 import { gcsEnabled, uploadBuffer } from "../storage/gcs";
 
 const IMAGE_MODEL = "gemini-2.5-flash-image";
@@ -14,12 +14,10 @@ function slugify(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
 }
 
-async function getApiKey(): Promise<string> {
-  const fromDb = await getSetting(SETTING_KEYS.GEMINI_API_KEY);
-  const key = fromDb || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
-  if (!key) throw new Error("Gemini API key not set. Add it in /admin/pinterest/settings.");
-  return key;
-}
+// Gemini API key now resolved via the shared helper in app/lib/gemini.ts —
+// so updating the key in /admin/pinterest/settings or the GEMINI_API_KEY env
+// immediately applies to both blog generation and Pinterest image generation.
+const getApiKey = getGeminiApiKey;
 
 const HOOK_ANGLES = [
   { name: "Curiosity question", example: "Why Every Florist Swears By This?" },
