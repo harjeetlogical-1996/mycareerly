@@ -99,6 +99,20 @@ model Setting {
   updatedAt DateTime @updatedAt
 }
 
+model AdminUser {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  name         String    @default("")
+  role         String    @default("editor") // "admin" (full) | "editor" (no user/settings mgmt)
+  active       Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([email, active])
+}
+
 model Subscriber {
   id        String   @id @default(cuid())
   email     String   @unique
