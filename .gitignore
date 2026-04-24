@@ -58,6 +58,9 @@ next-env.d.ts
 /public/uploads
 /public/pinterest
 
+# Backup of pre-compression images (local dev only, not needed in repo)
+/public/images/articles-originals
+
 # GCP service account key (never commit)
 /gcp-key.json
 /*-service-account.json
