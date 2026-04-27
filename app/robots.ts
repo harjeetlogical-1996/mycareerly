@@ -39,6 +39,9 @@ export default function robots(): MetadataRoute.Robots {
       },
     ],
     sitemap: [`${SITE_URL}/sitemap.xml`, `${SITE_URL}/feed.xml`],
-    host: SITE_URL,
+    // Note: 'host:' directive is intentionally omitted. It's a Yandex /
+    // Mail.ru extension; Googlebot logs it as 'Rule ignored' which can
+    // surface as a warning in Search Console. Canonical host preference
+    // is communicated via <link rel=canonical> + 301 redirects instead.
   };
 }
