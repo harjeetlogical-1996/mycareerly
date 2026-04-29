@@ -198,9 +198,11 @@ function renderContent(raw: string) {
     if (line.startsWith("### ")) {
       flushParas(); inFaq = false;
       elements.push(
-        <h3 key={`h3-${i}`} className="text-lg font-bold text-[#1A1A1A] mt-7 mb-3 pl-4 border-l-2 border-[#E8E4DF]">
-          {line.slice(4)}
-        </h3>
+        <h3
+          key={`h3-${i}`}
+          className="text-lg font-bold text-[#1A1A1A] mt-7 mb-3 pl-4 border-l-2 border-[#E8E4DF]"
+          dangerouslySetInnerHTML={{ __html: renderInline(line.slice(4)) }}
+        />
       );
       i++; continue;
     }
@@ -208,7 +210,11 @@ function renderContent(raw: string) {
     if (line.startsWith("#### ")) {
       flushParas();
       elements.push(
-        <h4 key={`h4-${i}`} className="text-base font-bold text-[#1A1A1A] mt-5 mb-2">{line.slice(5)}</h4>
+        <h4
+          key={`h4-${i}`}
+          className="text-base font-bold text-[#1A1A1A] mt-5 mb-2"
+          dangerouslySetInnerHTML={{ __html: renderInline(line.slice(5)) }}
+        />
       );
       i++; continue;
     }
