@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { getAdminSession } from "../lib/auth";
 import { logoutAction } from "../actions/auth";
-import GlobalProgress from "./components/GlobalProgress";
+// Progress bar moved to root layout so it covers public + admin without double-mounting
 import {
   Flower2, LayoutDashboard, BookOpen, Store,
   LogOut, ExternalLink, Settings, Tag, Users, MessageSquare, BarChart3,
@@ -55,9 +55,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-screen bg-[#F4F3F0] flex">
-      {/* Navigation + form submit progress indicator */}
-      <GlobalProgress />
-
       {/* Sidebar */}
       <aside className="w-60 bg-[#1A1A1A] text-white flex flex-col fixed inset-y-0 left-0 z-40">
         {/* Logo */}

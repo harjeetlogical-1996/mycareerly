@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "maps.googleapis.com" },
+      { protocol: "https", hostname: "places.googleapis.com" },
       { protocol: "https", hostname: "lh3.googleusercontent.com" },
       { protocol: "https", hostname: "streetviewpixels-pa.googleapis.com" },
       { protocol: "https", hostname: "www.google.com" },

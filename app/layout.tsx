@@ -4,6 +4,7 @@ import { Poppins } from "next/font/google";
 import "./globals.css";
 import { getSettings, SETTING_KEYS } from "./lib/settings";
 import { SITE_URL } from "./lib/site";
+import GlobalProgress from "./components/GlobalProgress";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -140,6 +141,8 @@ export default async function RootLayout({
         {pinterest && <meta name="p:domain_verify" content={pinterest} />}
       </head>
       <body className="min-h-full flex flex-col font-[family-name:var(--font-poppins)] bg-[#FAFAF8] text-[#1A1A1A]">
+        {/* Top progress bar — shows on every link click + form submit so users see something is happening */}
+        <GlobalProgress />
         {children}
 
         {/* Google Analytics 4 */}

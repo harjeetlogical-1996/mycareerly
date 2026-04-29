@@ -7,8 +7,9 @@ import { usePathname } from "next/navigation";
  * Top-of-page thin progress bar that shows on every client navigation
  * (link clicks, router.push, router.back) and on form submissions.
  *
- * Purely visual — no functional impact. Lives in the admin layout so it's
- * always mounted across admin pages.
+ * Mounted in the root layout so it covers BOTH the public site (article
+ * clicks, listing filters, city pages) and the admin panel (form posts,
+ * server actions). Purely visual — no functional impact.
  */
 export default function GlobalProgress() {
   const pathname = usePathname();
@@ -51,7 +52,16 @@ export default function GlobalProgress() {
       if (link) {
         const href = link.getAttribute("href");
         const targetAttr = link.getAttribute("target");
-        if (href && !href.startsWith("#") && !href.startsWith("mailto:") && !href.startsWith("tel:") && targetAttr !== "_blank") {
+        // Skip external links, mailto/tel, in-page anchors, modifier-clicks (open in new tab)
+        if (
+          href &&
+          !href.startsWith("#") &&
+          !href.startsWith("mailto:") &&
+          !href.startsWith("tel:") &&
+          !/^https?:\/\//i.test(href) &&
+          targetAttr !== "_blank" &&
+          !e.metaKey && !e.ctrlKey && !e.shiftKey && !(e as any).button
+        ) {
           start();
         }
         return;
