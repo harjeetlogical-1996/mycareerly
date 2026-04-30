@@ -15,7 +15,7 @@
 import "dotenv/config";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import sharp = require("sharp");
+import sharp from "sharp";
 import { PrismaClient } from "../app/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
