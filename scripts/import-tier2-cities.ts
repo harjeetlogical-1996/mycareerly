@@ -19,17 +19,10 @@
  */
 
 import "dotenv/config";
-import { PrismaClient } from "../app/generated/prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
+import { prisma } from "../app/lib/prisma";
 
-const dbUrl = process.env.DATABASE_URL;
-if (!dbUrl) throw new Error("DATABASE_URL required");
 const apiKey = process.env.GOOGLE_PLACES_API_KEY;
 if (!apiKey) throw new Error("GOOGLE_PLACES_API_KEY required");
-
-const prisma = new PrismaClient({
-  adapter: new PrismaPg({ connectionString: dbUrl }),
-} as any);
 
 // ── Cities — 50 tier-2 US cities (selected to avoid existing 51) ─────────────
 type SeedCity = { name: string; state: string; stateFull: string; slug: string };
@@ -429,6 +422,7 @@ async function main() {
   console.log(`\n📊 DB now has ${totalCities} cities, ${totalListings} listings.`);
 
   await prisma.$disconnect();
+  process.exit(0);
 }
 
 main().catch((e) => {

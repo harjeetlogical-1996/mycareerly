@@ -8,13 +8,9 @@
  * Idempotent — already-correct /listings/... links are untouched.
  */
 import "dotenv/config";
-import { PrismaClient } from "../app/generated/prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
+import { prisma } from "../app/lib/prisma";
 
 async function main() {
-  const prisma = new PrismaClient({
-    adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
-  } as any);
 
   // Load all listing slugs into a Set for O(1) lookup
   const listings = await prisma.listing.findMany({ select: { slug: true } });
@@ -58,5 +54,6 @@ async function main() {
   }
 
   await prisma.$disconnect();
+  process.exit(0);
 }
-main().catch(console.error);
+main().catch((e) => { console.error(e); process.exit(1); });

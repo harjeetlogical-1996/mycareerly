@@ -20,12 +20,7 @@ import "dotenv/config";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import sharp from "sharp";
-import { PrismaClient } from "../app/generated/prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-
-const prisma = new PrismaClient({
-  adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
-} as any);
+import { prisma } from "../app/lib/prisma";
 
 const SLUG = "best-flower-shops-new-york-city-2026-florist-guide";
 const TITLE = "Best Flower Shops in New York City: A 2026 Florist Guide";

@@ -12,12 +12,7 @@
  */
 
 import "dotenv/config";
-import { PrismaClient } from "../app/generated/prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-
-const prisma = new PrismaClient({
-  adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
-} as any);
+import { prisma } from "../app/lib/prisma";
 
 // 40 widely-used, well-loved Unsplash photo IDs of US cities, towns, neighborhoods.
 // Mix of skylines, suburb streets, beach towns, mountains — so cycling gives variety.
@@ -101,5 +96,6 @@ async function main() {
 
   console.log(`\n✅ Updated ${updated} cities with diverse covers.`);
   await prisma.$disconnect();
+  process.exit(0);
 }
-main().catch(console.error);
+main().catch((e) => { console.error(e); process.exit(1); });

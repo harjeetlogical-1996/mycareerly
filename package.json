@@ -21,6 +21,7 @@
     "better-sqlite3": "^12.9.0",
     "jose": "^6.2.2",
     "lucide-react": "^1.8.0",
+    "mongoose": "^9.6.2",
     "next": "16.2.3",
     "pg": "^8.20.0",
     "prisma": "^7.7.0",
